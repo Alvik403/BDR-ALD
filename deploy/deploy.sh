@@ -3,14 +3,15 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-# Из git-клона снимка базы нет: база начнётся пустой (схему приложение
-# создаст само при первом старте). В архиве дистрибутива рядом лежит db.sql
-# с данными — тогда он подхватится автоматически.
-if [ ! -f db.sql ]; then
-  touch db.sql
-  echo "Снимок базы db.sql не найден — база начнётся пустой."
+# Две раскладки:
+#  - архив дистрибутива: deploy.sh рядом с docker-compose, данные в ./deploy/;
+#  - git-клон: deploy.sh лежит в deploy/, данные рядом с ним.
+if [ -d deploy ]; then
+  DATA_DIR="deploy"
+else
+  DATA_DIR="."
 fi
-mkdir -p uploads
+CERT_DIR="${DATA_DIR}/certs"
 
 if [ ! -f .env ]; then
   cp .env.example .env
@@ -25,17 +26,25 @@ if [ ! -f .env ]; then
   echo "Создан .env, пароль PostgreSQL сгенерирован автоматически."
 fi
 
+# Снимка базы может не быть (git-клон) — тогда база начнётся пустой,
+# схему приложение создаст само при первом старте.
+if [ ! -f "${DATA_DIR}/db.sql" ]; then
+  touch "${DATA_DIR}/db.sql"
+  echo "Снимок базы не найден — база начнётся пустой."
+fi
+mkdir -p "${DATA_DIR}/uploads"
+
 # Самоподписанный сертификат, если корпоративного нет.
-# Чтобы использовать свой: положите fullchain.pem и privkey.pem в deploy/certs/.
-if [ ! -f deploy/certs/fullchain.pem ] || [ ! -f deploy/certs/privkey.pem ]; then
-  mkdir -p deploy/certs
+# Чтобы использовать свой: положите fullchain.pem и privkey.pem в ${CERT_DIR}.
+if [ ! -f "${CERT_DIR}/fullchain.pem" ] || [ ! -f "${CERT_DIR}/privkey.pem" ]; then
+  mkdir -p "${CERT_DIR}"
   cn="$(grep -E '^TLS_CN=' .env | tail -1 | cut -d= -f2 || true)"
   cn="${cn:-bdr.alabuga.ru}"
   openssl req -x509 -nodes -newkey rsa:2048 -days 825 \
-    -keyout deploy/certs/privkey.pem \
-    -out deploy/certs/fullchain.pem \
+    -keyout "${CERT_DIR}/privkey.pem" \
+    -out "${CERT_DIR}/fullchain.pem" \
     -subj "/CN=${cn}"
-  echo "Создан самоподписанный сертификат для ${cn} (deploy/certs/)."
+  echo "Создан самоподписанный сертификат для ${cn} (${CERT_DIR}/)."
   echo "Браузер покажет предупреждение; корпоративный сертификат можно подложить туда же и перезапустить."
 fi
 
