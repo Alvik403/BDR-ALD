@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block title %}Дашборд{% endblock %}
+{% block content %}
+<div class="upload-page dash-page">
+
+  <div class="upload-head">
+    <div>
+      <h1>Сводка по счетам</h1>
+      <p class="upload-head__sub">Актуальные оборотно-сальдовые ведомости · последняя загрузка по каждому счёту</p>
+    </div>
+    <span class="upload-head__hint">
+      {{ summary.accounts }} счетов{% if period %} · {{ period }}{% endif %}
+    </span>
+  </div>
+
+  <div class="up-summary">
+    <div class="up-summary__item">
+      <div class="up-summary__value">{{ summary.accounts }}</div>
+      <div class="up-summary__label">Всего счетов</div>
+    </div>
+    <div class="up-summary__item">
+      <div class="up-summary__value">{{ summary.with_data }}</div>
+      <div class="up-summary__label">С данными</div>
+    </div>
+    <div class="up-summary__item">
+      <div class="up-summary__value">{{ summary.rows|num }}</div>
+      <div class="up-summary__label">Строк данных</div>
+    </div>
+    <div class="up-summary__item">
+      <div class="up-summary__value up-summary__value--date">{{ summary.last|dt }}</div>
+      <div class="up-summary__label">Последняя загрузка</div>
+    </div>
+  </div>
+
+  <div class="up-section-title">Счета и последние загрузки</div>
+  <div class="dash-grid">
+    {% for item in cards %}
+    <article class="dash-card">
+      <div class="dash-card__top">
+        <span class="dash-card__code">{{ item.account.code }}</span>
+        {% if item.upload %}
+          <span class="up-status up-status--ok">Загружено</span>
+        {% else %}
+          <span class="up-status up-status--empty">Нет данных</span>
+        {% endif %}
+      </div>
+
+      <h2 class="dash-card__name">{{ item.account.name }}</h2>
+
+      {% if item.upload %}
+        <div class="dash-card__meta">
+          <span>{{ item.upload.period or "Период не указан" }}</span>
+          <span>{{ item.upload.company or "Организация не указана" }}</span>
+        </div>
+
+        <dl class="dash-card__stats">
+          <div>
+            <dt>Строк</dt>
+            <dd>{{ item.upload.row_count|num }}</dd>
+          </div>
+          <div>
+            <dt>Обороты Дт</dt>
+            <dd>{{ item.upload.total_turnover_debit|money }}</dd>
+          </div>
+          <div>
+            <dt>Обороты Кт</dt>
+            <dd>{{ item.upload.total_turnover_credit|money }}</dd>
+          </div>
+        </dl>
+
+        <div class="dash-card__foot">
+          <a class="dash-card__file" href="/accounts/{{ item.account.code }}?upload_id={{ item.upload.id }}" title="{{ item.upload.filename }}">
+            {{ item.upload.filename }}
+          </a>
+          <a class="up-btn up-btn--secondary dash-card__btn" href="/accounts/{{ item.account.code }}">Открыть</a>
+        </div>
+      {% else %}
+        <div class="dash-card__empty">ОСВ по этому счёту ещё не загружена.</div>
+        <div class="dash-card__foot">
+          <span class="dash-card__file muted">—</span>
+          <a class="up-btn up-btn--secondary dash-card__btn" href="/upload">Загрузить</a>
+        </div>
+      {% endif %}
+    </article>
+    {% endfor %}
+  </div>
+
+  <details class="up-history fot-dashboard">
+    <summary class="up-history__head">
+      <span class="up-history__title">ФОТ · сводка, категории и подразделения</span>
+      <span class="up-history__toggle" aria-hidden="true"></span>
+    </summary>
+    <div class="fot-dash-body">
+
+      <div class="stats-grid stats-grid--fot">
+        <div class="stat">
+          <div class="stat__label">ФОТ в БДР</div>
+          <div class="stat__value">{{ fot_summary.bdr|money }}</div>
+        </div>
+        <div class="stat">
+          <div class="stat__label">90.02</div>
+          <div class="stat__value">{{ fot_summary.account_9002|money }}</div>
+        </div>
+        <div class="stat">
+          <div class="stat__label">26</div>
+          <div class="stat__value">{{ fot_summary.account_26|money }}</div>
+        </div>
+        <div class="stat">
+          <div class="stat__label">25 · справочно</div>
+          <div class="stat__value">{{ fot_summary.account_25|money }}</div>
+        </div>
+      </div>
+
+      {% if fot_summary.unmapped %}
+      <div class="flash flash--err">
+        Без категории: {{ fot_summary.unmapped|money }}. Эти суммы входят в ФОТ,
+        но пока не отнесены к категориям.
+      </div>
+      {% endif %}
+
+      <section class="panel">
+        <div class="panel__head">
+          <h2>Структура ФОТ по категориям</h2>
+        </div>
+        <div class="table-wrap">
+          <table class="osv-table fot-category-table">
+            <thead>
+              <tr>
+                <th>Категория ФОТ</th>
+                <th class="num">90.02</th>
+                <th class="num">26</th>
+                <th class="num">25 · справочно</th>
+                <th class="num">Итого в БДР</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in fot_category_rows %}
+              <tr>
+                <td>{{ item.target }}</td>
+                <td class="num">{{ item.by_account['90.02']|money }}</td>
+                <td class="num">{{ item.by_account['26']|money }}</td>
+                <td class="num">{{ item.by_account['25']|money }}</td>
+                <td class="num">{{ item.total_bdr|money }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr class="flat-total">
+                <td>Итого</td>
+                <td class="num">{{ fot_summary.account_9002|money }}</td>
+                <td class="num">{{ fot_summary.account_26|money }}</td>
+                <td class="num">{{ fot_summary.account_25|money }}</td>
+                <td class="num">{{ fot_summary.bdr|money }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
+
+      {% for group in fot_groups %}
+      <section class="panel fot-section">
+        <div class="panel__head">
+          <div>
+            <h2>{{ group.title }}</h2>
+            {% if group.note %}<p class="mapping-note mapping-note--group">{{ group.note }}</p>{% endif %}
+          </div>
+          <div class="fot-total">
+            <span class="muted">ФОТ</span>
+            <b>{{ group.total|money }}</b>
+            {% if group.in_bdr %}
+            <span class="badge badge--ok">в БДР</span>
+            <a class="btn btn--sm" href="/mapping?view=fot">Редактировать</a>
+            {% else %}
+            <span class="badge">справочно</span>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if group.rows %}
+        <div class="table-wrap">
+          <table class="osv-table fot-table">
+            <thead>
+              <tr>
+                <th>Подразделение</th>
+                <th class="num">Сумма ФОТ</th>
+                <th>Категория ФОТ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in group.rows %}
+              <tr>
+                <td>{{ row.department }}</td>
+                <td class="num">{{ row.amount|money }}</td>
+                <td>
+                  {% if row.target %}{{ row.target }}
+                  {% else %}<span class="badge-unmapped">без категории</span>{% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty-inline">Нет строк ФОТ по этому счёту в последних загрузках.</div>
+        {% endif %}
+      </section>
+      {% endfor %}
+
+      <div class="up-actions fot-dash-actions">
+        <a class="up-btn up-btn--secondary" href="/mapping?view=fot">Открыть мэппинг ФОТ</a>
+      </div>
+
+    </div>
+  </details>
+
+  <div class="up-actions">
+    <a class="up-btn up-btn--primary" href="/upload">Загрузить Excel</a>
+  </div>
+
+</div>
+{% endblock %}

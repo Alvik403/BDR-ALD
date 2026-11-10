@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Общая{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Общая таблица</h1>
+</div>
+
+<form class="filters" method="get" action="/general">
+  <div class="filter-field">
+    <label for="f-account">Счёт</label>
+    <select id="f-account" name="account">
+      <option value="">Все</option>
+      {% for item in accounts %}
+      <option value="{{ item.code }}" {% if filters.account == item.code %}selected{% endif %}>{{ item.code }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filter-field">
+    <label>Подразделение</label>
+    <input type="text" name="department" value="{{ filters.department }}" placeholder="поиск">
+  </div>
+  <div class="filter-field">
+    <label>Номенклатурная группа</label>
+    <input type="text" name="group" value="{{ filters.group }}" placeholder="поиск">
+  </div>
+  <div class="filter-field">
+    <label>Статья затрат</label>
+    <input type="text" name="article" value="{{ filters.article }}" placeholder="поиск">
+  </div>
+  <div class="filter-field">
+    <label>Месяц</label>
+    <select name="month">
+      <option value="">Все</option>
+      {% for value in month_options %}
+      <option value="{{ value }}" {% if filters.month == value %}selected{% endif %}>{{ value }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filter-field filter-field--range">
+    <label>Обороты Дт</label>
+    <div class="range-inputs">
+      <input type="number" step="0.01" name="debit_min" value="{{ filters.debit_min }}" placeholder="от">
+      <input type="number" step="0.01" name="debit_max" value="{{ filters.debit_max }}" placeholder="до">
+    </div>
+  </div>
+  <div class="filter-field filter-field--range">
+    <label>Обороты Кт</label>
+    <div class="range-inputs">
+      <input type="number" step="0.01" name="credit_min" value="{{ filters.credit_min }}" placeholder="от">
+      <input type="number" step="0.01" name="credit_max" value="{{ filters.credit_max }}" placeholder="до">
+    </div>
+  </div>
+  <div class="filter-field">
+    <label>Мэппинг</label>
+    <input type="text" name="target" value="{{ filters.target }}" placeholder="поиск">
+  </div>
+  <div class="filter-field">
+    <label>Статус</label>
+    <select name="status">
+      <option value="">Все</option>
+      <option value="mapped" {% if filters.status == 'mapped' %}selected{% endif %}>Размечено</option>
+      <option value="unmapped" {% if filters.status == 'unmapped' %}selected{% endif %}>Не размечено</option>
+    </select>
+  </div>
+  <div class="filter-actions">
+    <button class="btn btn--primary" type="submit">Применить</button>
+    <a class="btn" href="/general">Сбросить</a>
+  </div>
+</form>
+
+<div class="summary">
+  Строк: <b>{{ total }}</b>
+  <span>·</span> Дт: <b>{{ total_debit|money0 }}</b>
+  <span>·</span> Кт: <b>{{ total_credit|money0 }}</b>
+</div>
+
+<section class="panel">
+  <div class="table-wrap">
+    <table class="osv-table flat-table general-table">
+      <thead>
+        <tr>
+          <th>Счёт</th>
+          <th>Подразделение</th>
+          <th>Номенклатурная группа</th>
+          <th>Статья затрат</th>
+          <th>Месяц</th>
+          <th class="num">Обороты Дт</th>
+          <th class="num">Обороты Кт</th>
+          <th>Мэппинг</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in rows %}
+        <tr{% if item.status == 'unmapped' %} class="is-unmapped"{% endif %}>
+          <td><a href="/accounts/{{ item.account_code }}">{{ item.account_code }}</a></td>
+          <td>{{ item.department }}</td>
+          <td>{{ item.group_name }}</td>
+          <td>{{ item.article }}</td>
+          <td>{{ item.month or "" }}</td>
+          <td class="num">{{ item.debit|money }}</td>
+          <td class="num">{{ item.credit|money }}</td>
+          <td>
+            {% if item.target %}{{ item.target }}{% else %}<span class="badge-unmapped">не размечено</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if not rows %}<div class="empty-inline">Нет строк по выбранным фильтрам.</div>{% endif %}
+</section>
+
+{% if total_pages > 1 %}
+<div class="pagination">
+  {% if page > 1 %}<a class="btn btn--sm" href="{{ page_url(page - 1) }}">Назад</a>{% endif %}
+  <span>Страница {{ page }} из {{ total_pages }}</span>
+  {% if page < total_pages %}<a class="btn btn--sm" href="{{ page_url(page + 1) }}">Вперёд</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

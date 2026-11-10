@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% block title %}Загрузка ОСВ{% endblock %}
+{% block content %}
+<div class="upload-page">
+
+  <div class="upload-head">
+    <div>
+      <h1>Загрузка оборотно-сальдовых ведомостей</h1>
+      <p class="upload-head__sub">Пакетная обработка · автоматическое распознавание счёта, периода и организации</p>
+    </div>
+    <span class="upload-head__hint">.xlsx · .xlsm · до {{ max_mb }} МБ на файл</span>
+  </div>
+
+  <form class="up-dropzone" id="upload-form" method="post" action="/upload" enctype="multipart/form-data">
+    <input type="file" name="files" id="file" accept=".xlsx,.xlsm" multiple hidden>
+    <div class="up-dropzone__icon" aria-hidden="true">+</div>
+    <div class="up-dropzone__title">Перетащите файлы ОСВ сюда или выберите вручную</div>
+    <div class="up-dropzone__hint">
+      Формат: .xlsx, .xlsm · Максимум {{ max_mb }} МБ на файл<br>
+      Поддерживаемые счета: 25, 26, 90.01, 90.02, 91.01, 91.02
+    </div>
+    <div class="up-selected" id="file-list" hidden></div>
+    <button class="up-btn up-btn--primary" type="submit" id="submit-btn" disabled>Загрузить</button>
+  </form>
+
+  {% if results %}
+    <div class="up-section-title">Результаты загрузки</div>
+    <table class="up-table">
+      <thead>
+        <tr>
+          <th style="width:30%">Файл</th>
+          <th style="width:30%">Распознанные данные</th>
+          <th style="width:24%">Итоги</th>
+          <th style="width:16%">Статус</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in results %}
+        <tr>
+          <td class="up-file" data-label="Файл">
+            {% if item.upload_id %}
+              <a href="/accounts/{{ item.account }}?upload_id={{ item.upload_id }}">{{ item.filename }}</a>
+            {% else %}
+              {{ item.filename }}
+            {% endif %}
+          </td>
+          <td class="up-meta" data-label="Распознанные данные">
+            <span>Счёт: <b>{{ item.account or "—" }}</b></span>
+            <span>Период: {{ item.period or "—" }}</span>
+            <span>Организация: {{ item.company or "—" }}</span>
+          </td>
+          <td class="up-meta" data-label="Итоги">
+            {% if item.status != "error" %}
+              <span>Строк: <b>{{ item.rows|num }}</b></span>
+              <span>Обороты Дт: {{ item.debit|money }}</span>
+              <span>Обороты Кт: {{ item.credit|money }}</span>
+            {% else %}
+              <span>—</span>
+            {% endif %}
+          </td>
+          <td data-label="Статус">
+            <span class="up-status up-status--{{ item.status }}">{{ item.label }}</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% for item in results if item.status == "error" %}
+    <div class="up-error">
+      <div class="up-error__title">Не удалось загрузить — {{ item.filename }}</div>
+      <div class="up-error__text">{{ item.message }}</div>
+    </div>
+    {% endfor %}
+
+    {% for item in results if item.status == "duplicate" %}
+    <div class="up-error up-error--info">
+      <div class="up-error__title">Повторная загрузка — {{ item.filename }}</div>
+      <div class="up-error__text">
+        Файл с таким содержимым уже был загружен{% if item.existing_at %} {{ item.existing_at|dt }}{% endif %}.
+        Повторная обработка пропущена, данные не задвоены.
+      </div>
+    </div>
+    {% endfor %}
+
+    <div class="up-summary">
+      <div class="up-summary__item">
+        <div class="up-summary__value">{{ batch.total }}</div>
+        <div class="up-summary__label">Всего файлов</div>
+      </div>
+      <div class="up-summary__item">
+        <div class="up-summary__value">{{ batch.ok }}</div>
+        <div class="up-summary__label">Загружено</div>
+      </div>
+      <div class="up-summary__item">
+        <div class="up-summary__value">{{ batch.error }}</div>
+        <div class="up-summary__label">Отклонено</div>
+      </div>
+      <div class="up-summary__item">
+        <div class="up-summary__value">{{ batch.duplicate }}</div>
+        <div class="up-summary__label">Дубликатов</div>
+      </div>
+    </div>
+
+  {% elif recent %}
+    <div class="up-section-title">Актуальные загрузки по счетам</div>
+    <table class="up-table">
+      <thead>
+        <tr>
+          <th style="width:30%">Файл</th>
+          <th style="width:30%">Распознанные данные</th>
+          <th style="width:24%">Итоги</th>
+          <th style="width:16%">Статус</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for upload in recent %}
+        <tr>
+          <td class="up-file" data-label="Файл">
+            <a href="/accounts/{{ upload.account_code }}?upload_id={{ upload.id }}">{{ upload.filename }}</a>
+          </td>
+          <td class="up-meta" data-label="Распознанные данные">
+            <span>Счёт: <b>{{ upload.account_code }}</b></span>
+            <span>Период: {{ upload.period or "—" }}</span>
+            <span>Организация: {{ upload.company or "—" }}</span>
+          </td>
+          <td class="up-meta" data-label="Итоги">
+            <span>Строк: <b>{{ upload.row_count|num }}</b></span>
+            <span>Обороты Дт: {{ upload.total_turnover_debit|money }}</span>
+            <span>Обороты Кт: {{ upload.total_turnover_credit|money }}</span>
+          </td>
+          <td data-label="Статус"><span class="up-status up-status--ok">Загружено</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="up-summary">
+      <div class="up-summary__item">
+        <div class="up-summary__value">{{ summary.total_files }}</div>
+        <div class="up-summary__label">Всего файлов</div>
+      </div>
+      <div class="up-summary__item">
+        <div class="up-summary__value">{{ summary.accounts }}</div>
+        <div class="up-summary__label">Счетов</div>
+      </div>
+      <div class="up-summary__item">
+        <div class="up-summary__value">{{ summary.rows|num }}</div>
+        <div class="up-summary__label">Строк данных</div>
+      </div>
+      <div class="up-summary__item">
+        <div class="up-summary__value up-summary__value--date">{{ summary.last|dt }}</div>
+        <div class="up-summary__label">Последняя загрузка</div>
+      </div>
+    </div>
+
+  {% else %}
+    <div class="up-empty">Загрузок пока нет. Перетащите файл ОСВ в область выше — система сама определит счёт и период.</div>
+  {% endif %}
+
+  {% if history %}
+  <details class="up-history">
+    <summary class="up-history__head">
+      <span class="up-history__title">История загрузок</span>
+      <span class="up-history__toggle" aria-hidden="true"></span>
+    </summary>
+    <div class="up-history__list">
+      {% for upload in history %}
+      <div class="up-history__item">
+        <div class="up-history__date">{{ upload.created_at|dt }}</div>
+        <div class="up-history__info">
+          {{ upload.filename }} · счёт {{ upload.account_code }}{% if upload.period %} · {{ upload.period }}{% endif %}
+        </div>
+        <div class="up-history__stats">
+          <span>Строк: <b>{{ upload.row_count|num }}</b></span>
+          <a href="/accounts/{{ upload.account_code }}?upload_id={{ upload.id }}">Открыть</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </details>
+  {% endif %}
+
+  <div class="up-actions">
+    <a class="up-btn up-btn--secondary" href="/mapping">Перейти к мэппингу</a>
+  </div>
+
+</div>
+{% endblock %}

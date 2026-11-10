@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+{% block title %}Счёт {{ account.code }}{% endblock %}
+{% block content %}
+<nav class="crumbs">
+  <a href="/">Дашборд</a>
+  <span>/</span>
+  <span>Счёт {{ account.code }}</span>
+</nav>
+
+<div class="account-head">
+  <div>
+    <h1>Счёт {{ account.code }} · {{ account.name }}</h1>
+    {% if upload %}
+    <div class="account-head__meta">
+      {{ upload.period or "Период не указан" }}{% if upload.company %} · {{ upload.company }}{% endif %}
+    </div>
+    {% endif %}
+  </div>
+  <a class="btn" href="/upload">Загрузить</a>
+</div>
+
+<div class="account-tabs">
+  {% for tab in account_tabs %}
+  <a class="tab {% if tab.is_current %}is-active{% endif %}" href="/accounts/{{ tab.code }}" title="{{ tab.name }}">
+    {{ tab.code }}{% if tab.has_data %}<span class="tab__dot"></span>{% endif %}
+  </a>
+  {% endfor %}
+</div>
+
+{% if not upload %}
+<section class="empty-state">
+  <h2>Нет данных</h2>
+  <a class="btn btn--primary" href="/upload">Загрузить ОСВ</a>
+</section>
+{% else %}
+<section class="stats-grid">
+  <div class="stat">
+    <div class="stat__label">Оборот Дт</div>
+    <div class="stat__value">{{ upload.total_turnover_debit|money0 }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">Оборот Кт</div>
+    <div class="stat__value">{{ upload.total_turnover_credit|money0 }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">Сальдо нач.</div>
+    {% if upload.total_opening_debit or upload.total_opening_credit %}
+    <div class="stat__value stat__value--pair">Дт {{ upload.total_opening_debit|money0 }} · Кт {{ upload.total_opening_credit|money0 }}</div>
+    {% else %}
+    <div class="stat__value">—</div>
+    {% endif %}
+  </div>
+  <div class="stat">
+    <div class="stat__label">Сальдо кон.</div>
+    {% if upload.total_closing_debit or upload.total_closing_credit %}
+    <div class="stat__value stat__value--pair">Дт {{ upload.total_closing_debit|money0 }} · Кт {{ upload.total_closing_credit|money0 }}</div>
+    {% else %}
+    <div class="stat__value">—</div>
+    {% endif %}
+  </div>
+</section>
+
+{% if months %}
+<section class="panel">
+  <div class="panel__head"><h2>По месяцам</h2></div>
+  <div class="month-grid">
+    {% for month in months %}
+    <div class="month-card">
+      <div class="month-card__name">{{ month.name }}</div>
+      <div class="month-card__value">{{ month.debit|money0 }}</div>
+      {% if month.credit != month.debit %}
+      <div class="month-card__sub">Кт {{ month.credit|money0 }}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section class="panel">
+  <div class="panel__head">
+    <div>
+      <h2>Счёт {{ account.code }}</h2>
+      <span class="muted">{{ upload.filename }}</span>
+    </div>
+    <div class="view-switch">
+      <a class="view-switch__item {% if view != 'flat' %}is-active{% endif %}"
+         href="/accounts/{{ account.code }}?upload_id={{ upload.id }}{% if mapping_filter %}&mapping_filter={{ mapping_filter }}{% endif %}">Группировка</a>
+      <a class="view-switch__item {% if view == 'flat' %}is-active{% endif %}"
+         href="/accounts/{{ account.code }}?upload_id={{ upload.id }}&view=flat{% if mapping_filter %}&mapping_filter={{ mapping_filter }}{% endif %}">Плоская</a>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    {% if view == 'flat' %}
+    <table class="osv-table flat-table">
+      <thead>
+        <tr>
+          {% if flat_has_divisions %}<th>Подразделение</th>{% endif %}
+          {% if flat_has_groups %}<th>Группа</th>{% endif %}
+          <th>Статья затрат</th>
+          {% if flat_has_months %}<th>Месяц</th>{% endif %}
+          {% if flat_has_balances %}
+          <th class="num">Сальдо нач. Дт</th>
+          <th class="num">Сальдо нач. Кт</th>
+          {% endif %}
+          <th class="num">Обороты Дт</th>
+          <th class="num">Обороты Кт</th>
+          {% if flat_has_balances %}
+          <th class="num">Сальдо кон. Дт</th>
+          <th class="num">Сальдо кон. Кт</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in flat_rows %}
+        <tr>
+          {% if flat_has_divisions %}<td>{{ item.division }}</td>{% endif %}
+          {% if flat_has_groups %}<td>{{ item.group }}</td>{% endif %}
+          <td>{{ item.item }}</td>
+          {% if flat_has_months %}<td>{{ item.month }}</td>{% endif %}
+          {% if flat_has_balances %}
+          <td class="num">{{ item.row.opening_debit|money }}</td>
+          <td class="num">{{ item.row.opening_credit|money }}</td>
+          {% endif %}
+          <td class="num">{{ item.row.turnover_debit|money }}</td>
+          <td class="num">{{ item.row.turnover_credit|money }}</td>
+          {% if flat_has_balances %}
+          <td class="num">{{ item.row.closing_debit|money }}</td>
+          <td class="num">{{ item.row.closing_credit|money }}</td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="flat-total">
+          <td colspan="{{ flat_meta_cols }}">Итого</td>
+          {% if flat_has_balances %}
+          <td class="num">{{ flat_totals[0]|money }}</td>
+          <td class="num">{{ flat_totals[1]|money }}</td>
+          {% endif %}
+          <td class="num">{{ flat_totals[2]|money }}</td>
+          <td class="num">{{ flat_totals[3]|money }}</td>
+          {% if flat_has_balances %}
+          <td class="num">{{ flat_totals[4]|money }}</td>
+          <td class="num">{{ flat_totals[5]|money }}</td>
+          {% endif %}
+        </tr>
+      </tfoot>
+    </table>
+    {% else %}
+    <table class="osv-table">
+      <thead>
+        <tr>
+          <th rowspan="2" class="col-name">Наименование</th>
+          <th colspan="2">Сальдо на начало</th>
+          <th colspan="2">Обороты за период</th>
+          <th colspan="2">Сальдо на конец</th>
+        </tr>
+        <tr>
+          <th class="num">Дт</th>
+          <th class="num">Кт</th>
+          <th class="num">Дт</th>
+          <th class="num">Кт</th>
+          <th class="num">Дт</th>
+          <th class="num">Кт</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in rows %}
+        {% set row = item.row %}
+        <tr class="osv-row node-{{ row.node_type }}{% if item.is_group %} is-group{% endif %}"
+            data-id="{{ row.id }}"
+            data-parent="{{ row.parent_id or '' }}"
+            data-level="{{ row.level }}"
+            data-node="{{ row.node_type }}"
+            data-collapsed="{% if item.has_month_children %}1{% else %}0{% endif %}">
+          <td class="col-name">
+            <span class="indent" style="width: {{ row.level * 18 }}px"></span>
+            {% if item.has_children %}
+            <button type="button" class="tree-toggle" data-toggle="{{ row.id }}"
+                    aria-expanded="{% if item.has_month_children %}false{% else %}true{% endif %}"
+                    aria-label="Свернуть или развернуть"></button>
+            {% else %}
+            <span class="tree-toggle tree-toggle--empty"></span>
+            {% endif %}
+            <span class="node-label">{{ item.display }}</span>
+          </td>
+          <td class="num">{{ row.opening_debit|money }}</td>
+          <td class="num">{{ row.opening_credit|money }}</td>
+          <td class="num">{{ row.turnover_debit|money }}</td>
+          <td class="num">{{ row.turnover_credit|money }}</td>
+          <td class="num">{{ row.closing_debit|money }}</td>
+          <td class="num">{{ row.closing_credit|money }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </div>
+</section>
+
+<section class="panel" id="mapping">
+  <div class="panel__head">
+    <div>
+      <h2>Мэппинг</h2>
+    </div>
+    <div class="panel__actions">
+      {% if mapping_filter == 'unmapped' %}
+      <a class="btn btn--sm" href="/accounts/{{ account.code }}?upload_id={{ upload.id }}{% if view == 'flat' %}&view=flat{% endif %}">Все строки</a>
+      {% else %}
+      <a class="btn btn--sm" href="/accounts/{{ account.code }}?upload_id={{ upload.id }}{% if view == 'flat' %}&view=flat{% endif %}&mapping_filter=unmapped">Только неразмеченные</a>
+      {% endif %}
+      <a class="btn btn--sm" href="/mapping?account={{ account.code }}">Настроить</a>
+    </div>
+  </div>
+  {% if mapped_rows %}
+  {% if mapping_has_department %}<p class="mapping-note">Подразделение показано только для строк ФОТ.</p>{% endif %}
+  <div class="table-wrap">
+    <table class="osv-table flat-table mapped-table">
+      <thead>
+        <tr>
+          {% if mapping_has_department %}<th>Подразделение (ФОТ)</th>{% endif %}
+          {% if mapping_has_group %}<th>Номенклатурная группа</th>{% endif %}
+          {% if mapping_has_article %}<th>Статья затрат</th>{% endif %}
+          <th>Месяц</th>
+          <th class="num">Обороты Дт</th>
+          <th class="num">Обороты Кт</th>
+          <th>Мэппинг</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in mapped_rows %}
+        <tr{% if item.status == 'unmapped' %} class="is-unmapped"{% endif %}>
+          {% if mapping_has_department %}<td>{% if item.mapping_kind == 'department' %}{{ item.department }}{% endif %}</td>{% endif %}
+          {% if mapping_has_group %}<td>{{ item.group_name }}</td>{% endif %}
+          {% if mapping_has_article %}<td>{{ item.article }}</td>{% endif %}
+          <td>{{ item.month or "" }}</td>
+          <td class="num">{{ item.debit|money }}</td>
+          <td class="num">{{ item.credit|money }}</td>
+          <td>
+            {% if item.target %}{{ item.target }}{% else %}<span class="badge-unmapped">не размечено</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="flat-total">
+          <td colspan="{{ 1 + (1 if mapping_has_department else 0) + (1 if mapping_has_group else 0) + (1 if mapping_has_article else 0) }}">{% if mapping_filter == 'unmapped' %}Итого не размечено{% else %}Итого{% endif %}</td>
+          <td class="num">{{ mapping_total_debit|money }}</td>
+          <td class="num">{{ mapping_total_credit|money }}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  {% elif mapping_filter == 'unmapped' %}
+  <div class="empty-inline">Неразмеченных строк нет.</div>
+  {% else %}
+  <div class="empty-inline">Нет рассчитанных строк мэппинга.</div>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <div class="panel__head"><h2>Загрузки</h2></div>
+  <ul class="uploads">
+    {% for item in uploads %}
+    <li class="upload-item {% if item.id == upload.id %}is-current{% endif %}">
+      <div class="upload-item__main">
+        <a class="upload-item__name" href="/accounts/{{ account.code }}?upload_id={{ item.id }}">{{ item.filename }}</a>
+        <div class="upload-item__meta">{{ item.created_at|dt }} · {{ item.period or "—" }} · {{ item.row_count }} строк</div>
+      </div>
+      <div class="upload-item__actions">
+        <a class="btn btn--sm" href="/uploads/{{ item.id }}/file">Скачать</a>
+        <form method="post" action="/uploads/{{ item.id }}/delete"
+              onsubmit="return confirm('Удалить загрузку и все её строки?')">
+          <button class="btn btn--sm btn--danger" type="submit">Удалить</button>
+        </form>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

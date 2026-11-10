@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-osv}
+      POSTGRES_USER: ${POSTGRES_USER:-osv}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-osv_dev_password}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-osv} -d ${POSTGRES_DB:-osv}"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  web:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-osv}:${POSTGRES_PASSWORD:-osv_dev_password}@db:5432/${POSTGRES_DB:-osv}
+      UPLOAD_DIR: /data/uploads
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-25}
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  uploads:
+
+networks:
+  default:
+    ipam:
+      config:
+        # Explicit subnet: the host has many Docker networks and the default
+        # address pools are exhausted.
+        - subnet: 10.99.0.0/24

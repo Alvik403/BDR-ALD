@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+{% block title %}Мэппинг{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Мэппинг</h1>
+    <p class="page-sub">
+      {% if view == "fot" %}
+      ФОТ · 26 и 90.02 · подразделения и признак БДР
+      {% else %}
+      Все счета · статьи, номенклатурные группы и подразделения
+      {% endif %}
+    </p>
+  </div>
+  <div class="mapping-toolbar">
+    <button class="btn" type="button" data-import-open>Импорт</button>
+  </div>
+</div>
+
+{% if view == "fot" %}
+<dialog class="import-dialog" aria-label="Импорт ФОТ">
+  <div class="import-dialog__head">
+    <h2>Импорт ФОТ</h2>
+    <button class="import-dialog__close" type="button" data-import-close aria-label="Закрыть">×</button>
+  </div>
+  <p class="mapping-note">Отдельный лист ФОТ · 26 и 90.02</p>
+  <div class="import-dialog__downloads">
+    <a class="btn btn--sm" href="/mapping/fot/template.xlsx">Пустой шаблон</a>
+    <a class="btn btn--sm" href="/mapping/fot/export.xlsx">Текущий ФОТ</a>
+  </div>
+  <form class="import-form" method="post" action="/mapping/import" enctype="multipart/form-data">
+    <input type="hidden" name="view" value="fot">
+    <input type="hidden" name="account" value="">
+    <label class="btn btn--sm file-button">
+      Выбрать файл
+      <input type="file" name="file" id="mapping-import-file" accept=".xlsx,.xlsm" hidden>
+    </label>
+    <span class="file-name" id="mapping-import-name">Файл не выбран</span>
+    <button class="btn btn--primary" type="submit">Импортировать</button>
+  </form>
+</dialog>
+{% else %}
+<dialog class="import-dialog" aria-label="Импорт мэппинга">
+  <div class="import-dialog__head">
+    <h2>Импорт мэппинга</h2>
+    <button class="import-dialog__close" type="button" data-import-close aria-label="Закрыть">×</button>
+  </div>
+  <p class="mapping-note">Единый лист и отдельный лист ФОТ · импорт принимает оба</p>
+  <div class="import-dialog__downloads">
+    <a class="btn btn--sm" href="/mapping/template.xlsx">Пустой шаблон</a>
+    <a class="btn btn--sm" href="/mapping/export.xlsx">Текущий мэппинг</a>
+  </div>
+  <form class="import-form" method="post" action="/mapping/import" enctype="multipart/form-data">
+    <input type="hidden" name="view" value="main">
+    <input type="hidden" name="account" value="{{ account_filter }}">
+    <label class="btn btn--sm file-button">
+      Выбрать файл
+      <input type="file" name="file" id="mapping-import-file" accept=".xlsx,.xlsm" hidden>
+    </label>
+    <span class="file-name" id="mapping-import-name">Файл не выбран</span>
+    <button class="btn btn--primary" type="submit">Импортировать</button>
+  </form>
+</dialog>
+{% endif %}
+
+<nav class="mapping-switch" aria-label="Раздел мэппинга">
+  <a class="mapping-switch__item {% if view == 'main' %}is-active{% endif %}" href="{{ main_url }}">Основной</a>
+  <a class="mapping-switch__item {% if view == 'fot' %}is-active{% endif %}" href="{{ fot_url }}">Для ФОТ</a>
+</nav>
+
+{% if view == "fot" %}
+
+<section class="panel" id="fot">
+  <div class="panel__head">
+    <div>
+      <h2>Таблица ФОТ</h2>
+      <span class="muted">Только ФОТ · счёт · год · подразделение · признак БДР</span>
+    </div>
+    <div class="mapping-toolbar">
+      <span class="save-state" data-save-state="fot-form" hidden aria-live="polite">Изменено: 0</span>
+      <button class="btn btn--primary" type="submit" form="fot-form">Сохранить</button>
+    </div>
+  </div>
+
+  <div class="fot-toolbar">
+    <div class="fot-filters">
+      <input id="fot-search" type="search" placeholder="Подразделение или категория" aria-label="Поиск по ФОТ">
+      <select id="fot-status">
+        <option value="">Все строки</option>
+        <option value="unmapped">Только неразмеченные</option>
+        <option value="mapped">Только размеченные</option>
+      </select>
+    </div>
+  </div>
+
+  <form id="fot-form" method="post" action="/mapping/save">
+    <input type="hidden" name="account" value="">
+    <input type="hidden" name="return_to" value="mapping-fot">
+
+    <div class="table-wrap">
+      <table class="osv-table mapping-table fot-mapping-table">
+        <thead>
+          <tr>
+            <th>Счёт</th>
+            <th>Год</th>
+            <th>Подразделение / признак ОСВ</th>
+            <th>Признак БДР</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in fot_rows %}
+          <tr class="fot-row {% if not row.target %}is-unmapped{% endif %}"
+              data-search="{{ (row.department ~ ' ' ~ row.target)|lower }}"
+              data-status="{{ 'mapped' if row.target else 'unmapped' }}">
+            <td>{{ row.account }}</td>
+            <td>{{ row.year or "—" }}</td>
+            <td class="mapping-value" title="{{ row.department }}">{{ row.department }}</td>
+            <td class="editable-cell">
+              {% if row.entry_id %}
+              <input class="cell-input" type="text"
+                     name="target_{{ row.entry_id }}" value="{{ row.target }}"
+                     aria-label="Признак БДР — {{ row.department }}"
+                     placeholder="не размечено">
+              {% else %}
+              <input class="cell-input" type="text"
+                     name="new_target_{{ row.form_suffix }}" value="{{ row.target }}"
+                     aria-label="Признак БДР — {{ row.department }}"
+                     placeholder="не размечено">
+              <input type="hidden" name="new_key_{{ row.form_suffix }}"
+                     value="{{ row.department }}">
+              <input type="hidden" name="new_kind_{{ row.form_suffix }}"
+                     value="department">
+              <input type="hidden" name="new_account_{{ row.form_suffix }}"
+                     value="{{ row.account }}">
+              <input type="hidden" name="new_year_{{ row.form_suffix }}"
+                     value="{{ row.year }}">
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if not fot_rows %}
+    <div class="empty-inline">Нет строк ФОТ по 26 и 90.02.</div>
+    {% endif %}
+
+  </form>
+</section>
+
+
+{% else %}
+
+<section class="panel" id="unified">
+  <div class="panel__head">
+    <div>
+      <h2>Единый мэппинг</h2>
+      <span class="muted">Счёт · год · признак ОСВ · значение из ОСВ · признак БДР</span>
+    </div>
+    <div class="mapping-toolbar">
+      <span class="save-state" data-save-state="unified-form" hidden aria-live="polite">Изменено: 0</span>
+      <button class="btn btn--primary" type="submit" form="unified-form">Сохранить</button>
+    </div>
+  </div>
+
+  <form class="mapping-filters" method="get" action="/mapping" data-auto-submit>
+    <input type="hidden" name="view" value="main">
+    <select name="account">
+      <option value="">Все счета</option>
+      {% for item in accounts %}
+      <option value="{{ item.code }}" {% if account_filter == item.code %}selected{% endif %}>{{ item.code }}</option>
+      {% endfor %}
+    </select>
+    <select name="kind">
+      <option value="">Все признаки ОСВ</option>
+      {% for value, label in kind_options %}
+      <option value="{{ value }}" {% if kind_filter == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <select name="status">
+      <option value="">Все строки</option>
+      <option value="unmapped" {% if status_filter == 'unmapped' %}selected{% endif %}>Только неразмеченные</option>
+      <option value="mapped" {% if status_filter == 'mapped' %}selected{% endif %}>Только размеченные</option>
+    </select>
+    <input id="mapping-search" type="search" name="q" value="{{ q_filter }}" placeholder="Подразделение, статья, цель" aria-label="Поиск по мэппингу">
+    <button class="btn btn--sm" type="submit">Показать</button>
+    <a class="mapping-reset" href="/mapping?view=main">Сбросить</a>
+  </form>
+
+  <form id="unified-form" method="post" action="/mapping/save">
+    <input type="hidden" name="account" value="{{ account_filter }}">
+    <input type="hidden" name="return_kind" value="{{ kind_filter }}">
+    <input type="hidden" name="return_status" value="{{ status_filter }}">
+    <input type="hidden" name="return_q" value="{{ q_filter }}">
+    <input type="hidden" name="return_to" value="mapping-unified">
+
+    <div class="table-wrap">
+      <table class="osv-table mapping-table unified-table">
+        <thead>
+          <tr>
+            <th>Счёт</th>
+            <th>Год</th>
+            <th>Признак ОСВ</th>
+            <th>Подразделение / статья / прочее</th>
+            <th>Признак БДР</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in unified_rows %}
+          <tr class="{% if not row.target %}is-unmapped{% endif %}">
+            <td>{{ row.account or "—" }}</td>
+            <td>{{ row.year or "—" }}</td>
+            <td>{{ row.type_label }}</td>
+            <td class="mapping-value" title="{{ row.source_text }}">{{ row.source_text }}</td>
+            <td class="editable-cell">
+              {% if row.entry_id %}
+              <input class="cell-input" type="text"
+                     name="target_{{ row.entry_id }}" value="{{ row.target }}"
+                     aria-label="Признак БДР — {{ row.source_text }}"
+                     placeholder="не размечено">
+              {% else %}
+              <input class="cell-input" type="text"
+                     name="new_target_{{ row.form_suffix }}" value="{{ row.target }}"
+                     aria-label="Признак БДР — {{ row.source_text }}"
+                     placeholder="не размечено">
+              <input type="hidden" name="new_key_{{ row.form_suffix }}"
+                     value="{{ row.source_text }}">
+              <input type="hidden" name="new_kind_{{ row.form_suffix }}"
+                     value="{{ row.kind }}">
+              <input type="hidden" name="new_account_{{ row.form_suffix }}"
+                     value="{{ row.account }}">
+              <input type="hidden" name="new_year_{{ row.form_suffix }}"
+                     value="{{ row.year }}">
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if not unified_rows %}
+    <div class="empty-inline">
+      {% if account_filter == '25' %}
+      25 счёт не участвует в ФОТ; строк мэппинга нет.
+      {% else %}
+      Нет строк по выбранным фильтрам.
+      {% endif %}
+    </div>
+    {% endif %}
+
+  </form>
+</section>
+
+<script>
+  if (window.location.hash === "#fot") {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("view") !== "fot") {
+      params.set("view", "fot");
+      window.location.replace("/mapping?" + params.toString() + "#fot");
+    }
+  }
+</script>
+
+{% endif %}
+{% endblock %}

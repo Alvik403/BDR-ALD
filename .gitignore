@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# Секреты и окружение
+.env
+.env.*
+!.env.example
+
+# Данные приложения: загружаемые файлы, снимки базы, бэкапы
+data/
+uploads/
+backups/
+*.sql
+*.xlsx
+*.pem
+*.crt
+*.key
+
+# Тестовые фикстуры содержат реальные ОСВ компании
+tests/fixtures/
+
+# Развёртка: архив содержит снимок базы и загруженные файлы
+dist/
+
+# Внутренние рабочие материалы (СБ-чек-листы, PDF и пр.)
+checklist_work/
+pdf_work/
+test.html

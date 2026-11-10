@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}ФОТ{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>ФОТ</h1>
+    <p class="page-sub">{{ period_label }} · подразделения и категории</p>
+  </div>
+  <div class="mapping-toolbar">
+    <form class="inline-form" method="get" action="/fot">
+      <select name="account">
+        <option value="">Все счета</option>
+        {% for item in accounts %}
+        <option value="{{ item.code }}" {% if account_filter == item.code %}selected{% endif %}>{{ item.code }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn btn--sm" type="submit">Показать</button>
+    </form>
+    <a class="btn btn--sm" href="/mapping">Общий мэппинг</a>
+    <a class="btn btn--primary" href="/mapping#fot">Редактировать ФОТ</a>
+  </div>
+</div>
+
+<p class="mapping-note">
+  В итог БДР входит ФОТ 90.02 и 26. ФОТ 25 показан справочно.
+  Категория ФОТ — управленческая аналитика; итог ФОТ считается по статьям.
+</p>
+{% if account_filter %}
+<p class="mapping-note">
+  Показан только счёт {{ account_filter }}; карточки и структура категорий — по всем счетам.
+</p>
+{% endif %}
+
+<div class="stats-grid">
+  <div class="stat">
+    <div class="stat__label">ФОТ в БДР</div>
+    <div class="stat__value">{{ summary.bdr|money }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">90.02</div>
+    <div class="stat__value">{{ summary.account_9002|money }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">26</div>
+    <div class="stat__value">{{ summary.account_26|money }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">25 · справочно</div>
+    <div class="stat__value">{{ summary.account_25|money }}</div>
+  </div>
+</div>
+
+{% if summary.unmapped %}
+<div class="flash flash--err">
+  Без категории: {{ summary.unmapped|money }}. Эти суммы входят в ФОТ,
+  но пока не отнесены к категориям.
+</div>
+{% endif %}
+
+<section class="panel">
+  <div class="panel__head">
+    <h2>Структура ФОТ по категориям</h2>
+  </div>
+  <div class="table-wrap">
+    <table class="osv-table fot-category-table">
+      <thead>
+        <tr>
+          <th>Категория ФОТ</th>
+          <th class="num">90.02</th>
+          <th class="num">26</th>
+          <th class="num">25 · справочно</th>
+          <th class="num">Итого в БДР</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in category_rows %}
+        <tr>
+          <td>{{ item.target }}</td>
+          <td class="num">{{ item.by_account['90.02']|money }}</td>
+          <td class="num">{{ item.by_account['26']|money }}</td>
+          <td class="num">{{ item.by_account['25']|money }}</td>
+          <td class="num">{{ item.total_bdr|money }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="flat-total">
+          <td>Итого</td>
+          <td class="num">{{ summary.account_9002|money }}</td>
+          <td class="num">{{ summary.account_26|money }}</td>
+          <td class="num">{{ summary.account_25|money }}</td>
+          <td class="num">{{ summary.bdr|money }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</section>
+
+<div class="fot-toolbar">
+  <div class="fot-filters">
+    <input id="fot-search" type="search" placeholder="Подразделение или категория">
+    <select id="fot-status">
+      <option value="">Все категории</option>
+      <option value="unmapped">Без категории</option>
+      <option value="mapped">С категорией</option>
+    </select>
+  </div>
+</div>
+
+{% for group in groups %}
+<section class="panel fot-section">
+  <div class="panel__head">
+    <div>
+      <h2>{{ group.title }}</h2>
+      {% if group.note %}<p class="mapping-note mapping-note--group">{{ group.note }}</p>{% endif %}
+    </div>
+    <div class="fot-total">
+      <span class="muted">ФОТ</span>
+      <b>{{ group.total|money }}</b>
+      {% if group.in_bdr %}
+      <span class="badge badge--ok">в БДР</span>
+      <a class="btn btn--sm" href="/mapping#fot">Редактировать</a>
+      {% else %}
+      <span class="badge">справочно</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if group.rows %}
+  <div class="table-wrap">
+    <table class="osv-table fot-table">
+      <thead>
+        <tr>
+          <th>Подразделение</th>
+          <th class="num">Сумма ФОТ</th>
+          <th>Категория ФОТ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in group.rows %}
+        <tr class="fot-row"
+            data-search="{{ (row.department ~ ' ' ~ row.target)|lower }}"
+            data-status="{{ row.status }}">
+          <td>{{ row.department }}</td>
+          <td class="num">{{ row.amount|money }}</td>
+          <td>
+            {% if row.target %}{{ row.target }}
+            {% else %}<span class="badge-unmapped">без категории</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-inline">Нет строк ФОТ по этому счёту в последних загрузках.</div>
+  {% endif %}
+</section>
+{% endfor %}
+{% endblock %}
