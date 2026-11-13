@@ -9,17 +9,10 @@
 </div>
 
 <p class="bdr-note">
-  Заполнены фактические месяцы 3 квартала 2026. 2025, плановые колонки
-  2026/2027/2028 и налог пока пусты — нет исходных данных.
-</p>
-<p class="bdr-note">
-  25 счёт показан справочно и не участвует в итогах. ФОТ рассчитан
-  по статьям 90.02 и 26; категория ФОТ на итог не влияет.
-  <a href="/mapping?view=fot">Детализация ФОТ</a>.
-</p>
-<p class="bdr-note">
-  Валовая прибыль = выручка − себестоимость; прибыль от продаж =
-  валовая прибыль − ФОТ − общехозяйственные расходы.
+  Факт — 3 кв. 2026 (июль–сентябрь); 2025, план 2026–2028 и налог пусты — нет данных.
+  25 счёт — справочно, вне итогов. Валовая = выручка − себестоимость;
+  прибыль от продаж = валовая − ФОТ − общехозяйственные.
+  <a href="/mapping?view=fot">ФОТ</a>.
 </p>
 {% if bdr.has_unmapped %}
 <p class="bdr-note">
@@ -30,27 +23,27 @@
 
 <section class="bdr-summary">
   <div class="stat">
-    <div class="stat__label">Выручка · 3 кв.</div>
+    <div class="stat__label">Выручка</div>
     <div class="stat__value">{{ bdr.summary.revenue|money }}</div>
   </div>
   <div class="stat">
-    <div class="stat__label">Себестоимость · 3 кв.</div>
+    <div class="stat__label">Себестоимость</div>
     <div class="stat__value">{{ bdr.summary.cost|money }}</div>
   </div>
   <div class="stat">
-    <div class="stat__label">Валовая прибыль · 3 кв.</div>
+    <div class="stat__label">Валовая прибыль</div>
     <div class="stat__value">{{ bdr.summary.gross|money }}</div>
   </div>
   <div class="stat">
-    <div class="stat__label">ФОТ · 3 кв.</div>
+    <div class="stat__label">ФОТ</div>
     <div class="stat__value">{{ bdr.summary.fot|money }}</div>
   </div>
   <div class="stat">
-    <div class="stat__label">Прибыль от продаж · 3 кв.</div>
+    <div class="stat__label">Прибыль от продаж</div>
     <div class="stat__value">{{ bdr.summary.profit_sales|money }}</div>
   </div>
   <div class="stat">
-    <div class="stat__label">Прибыль до НО · БУ · 3 кв.</div>
+    <div class="stat__label">Прибыль до НО · БУ</div>
     <div class="stat__value">{{ bdr.summary.profit_before_tax|money }}</div>
   </div>
 </section>
@@ -83,7 +76,7 @@
           <td class="bdr-section">{{ row.section }}</td>
           <td class="bdr-param">{{ row.param }}</td>
           {% for column in bdr.columns %}
-          <td class="num{% if column.key == 'q3' %} col-q3{% endif %}">
+          <td class="num{% if column.key == 'q3' %} col-q3{% endif %}{% if row.values[column.key] and row.values[column.key] < 0 %} neg{% endif %}">
             {{ row.values[column.key]|money }}
           </td>
           {% endfor %}
@@ -93,9 +86,4 @@
     </table>
   </div>
 </section>
-
-<p class="bdr-note bdr-note--bottom">
-  Общепроизводственные расходы (25 счёт, кроме ФОТ) показаны справочно
-  и не входят в итоговые суммы.
-</p>
 {% endblock %}

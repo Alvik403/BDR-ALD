@@ -97,7 +97,7 @@ SEED_ACCOUNTS = [
 ]
 
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
-ASSET_VERSION = "20261110-01"
+ASSET_VERSION = "20261110-02"
 templates.env.globals["asset_version"] = ASSET_VERSION
 
 ZERO = Decimal("0.00")

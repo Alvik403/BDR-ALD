@@ -186,6 +186,16 @@
     syncInput();
   }
 
+  // BDR: показывать колонку факта сразу, без ручной прокрутки
+  var bdrWrap = document.querySelector(".bdr-wrap");
+  if (bdrWrap) {
+    var q3Head = bdrWrap.querySelector("thead th.col-q3");
+    if (q3Head) {
+      var stickyWidth = 430 + 24; /* Показатель + Параметр + отступ */
+      bdrWrap.scrollLeft = Math.max(0, q3Head.offsetLeft - stickyWidth);
+    }
+  }
+
   var fotDetails = document.querySelector("details.fot-dashboard");
   if (fotDetails) {
     var syncFotDetails = function () {

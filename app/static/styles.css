@@ -1902,3 +1902,21 @@ p { margin: 0; }
 
 .app-layout.side-hidden .side-panel { display: none; }
 .app-layout.side-hidden .sidebar-toggle { background: #1a1a1a; color: #ffffff; border-color: #1a1a1a; }
+
+/* BDR: fact column, sub-rows, negatives */
+
+.bdr-table th.col-q3 { background: #d9e6ff; }
+.bdr-table td.col-q3 { background: #e6efff; font-weight: 650; color: var(--text); }
+.bdr-table .row-total td.col-q3,
+.bdr-table .row-section-total td.col-q3 { background: #d9e6ff; }
+
+.bdr-table td.neg { color: var(--danger) !important; font-weight: 650; }
+
+.bdr-table .row-sub td.bdr-param { padding-left: 24px; }
+.bdr-table .row-sub td.bdr-param::before {
+  content: "↳ ";
+  color: #a5adba;
+}
+.bdr-table .row-sub td.bdr-section { color: #a5adba; }
+
+.bdr-summary .stat__label { white-space: nowrap; }
