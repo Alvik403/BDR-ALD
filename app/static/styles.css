@@ -1889,3 +1889,16 @@ p { margin: 0; }
 .layout-dashboard.fot-expanded .page { overflow: visible; }
 .layout-dashboard.fot-expanded .dash-grid { flex: none; }
 .layout-dashboard.fot-expanded .dash-card { min-height: 240px; }
+
+/* Collapsible side panel */
+
+.sidebar-toggle {
+  width: 32px;
+  height: 32px;
+  margin-left: 0;
+  flex: 0 0 auto;
+}
+.sidebar-toggle svg { width: 16px; height: 16px; }
+
+.app-layout.side-hidden .side-panel { display: none; }
+.app-layout.side-hidden .sidebar-toggle { background: #1a1a1a; color: #ffffff; border-color: #1a1a1a; }

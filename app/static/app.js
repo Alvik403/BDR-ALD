@@ -1,6 +1,35 @@
 (function () {
   "use strict";
 
+  var layout = document.querySelector(".app-layout");
+  var sidebarToggle = document.getElementById("sidebar-toggle");
+  if (layout && sidebarToggle) {
+    var applySidebar = function (hidden) {
+      layout.classList.toggle("side-hidden", hidden);
+      sidebarToggle.setAttribute("aria-expanded", hidden ? "false" : "true");
+      sidebarToggle.setAttribute(
+        "aria-label",
+        hidden ? "Показать меню" : "Скрыть меню"
+      );
+    };
+    var storedSidebar = null;
+    try {
+      storedSidebar = window.localStorage.getItem("sidebarHidden");
+    } catch (error) {
+      storedSidebar = null;
+    }
+    applySidebar(storedSidebar === "1");
+    sidebarToggle.addEventListener("click", function () {
+      var hidden = !layout.classList.contains("side-hidden");
+      applySidebar(hidden);
+      try {
+        window.localStorage.setItem("sidebarHidden", hidden ? "1" : "0");
+      } catch (error) {
+        /* private mode — just don't remember */
+      }
+    });
+  }
+
   var table = document.querySelector(".osv-table");
   if (table) {
     var rows = Array.prototype.slice.call(table.querySelectorAll("tr.osv-row"));
